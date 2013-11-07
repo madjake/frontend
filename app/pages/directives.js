@@ -249,18 +249,32 @@ angular.module('app').
       link: function(scope, element, attrs) {
         element.bind('click', function(e){
           e.preventDefault();
+          //parse the gaqArgs array
+          var analyticsArray = attrs.gaqArgs.split(",").map(function(e) {return e.replace(/[^a-z0-9]+/gi, "");});
+          //add the href attribute
+          analyticsArray.push(attrs.href);
+          console.log(scope);
+          //send data to google. redirect to auth route in callback when data is finished sending
+          ga("send", analyticsArray[0], analyticsArray[1], analyticsArray[2], analyticsArray[3], {'hitCallback': function () {
+            $window.location = attrs.href;
+          }});
         });
-        var gaqArgsWatcher = scope.$watch(attrs.gaqArgs, function(gaqArgs) {
-          gaqArgsWatcher();
-          if (gaqArgs) {
-            element.bind('click', function(){
-              gaqArgs.push(attrs.href);
-              $window._gaq.push(gaqArgs);
-
-              $timeout(function() {
-                $window.location = attrs.href;
-              }, 250);
-            });
+      }
+    };
+  }]).
+  directive('gaqEventTrack', ['$window', function($window) {
+    return {
+      restrict: "AC",
+      link: function(scope, element, attrs) {
+        element.bind(attrs.gaqEvent, function() {
+          var analyticsArray = attrs.gaqArgs.split(",").map(function(e) {return e.replace(/[^a-z0-9]+/gi, "");} );
+          //if the option_value is given, make sure it is an integer. See https://developers.google.com/analytics/devguides/collection/gajs/eventTrackerGuide
+          if (analyticsArray.length === 5 && typeof(analyticsArray[4]) !== "number") {
+            var parsedValue = parseInt(analyticsArray[4], 10);
+            analyticsArray[4] = parsedValue;
+            ga("send", analyticsArray[0], analyticsArray[1], analyticsArray[2], analyticsArray[3], analyticsArray[4]);
+          } else {
+            ga("send", analyticsArray[0], analyticsArray[1], analyticsArray[2], analyticsArray[3]);
           }
         });
       }
